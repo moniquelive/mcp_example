@@ -10,3 +10,9 @@
 - client:
 
   ANTHROPIC_API_KEY=... python client.py
+
+### env vars
+
+- FASTMCP_PORT - port for fastmcp server
+- KEYLIGHT_API_BASE - keylight api base url
+- ANTHROPIC_API_KEY - anthropic api key

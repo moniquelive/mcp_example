@@ -1,13 +1,12 @@
 import asyncio
-from typing import Optional
 from contextlib import AsyncExitStack
-
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-from mcp.client.sse import sse_client
+from typing import Optional, Any, List
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.sse import sse_client
+from mcp.client.stdio import stdio_client
 
 load_dotenv()  # load environment variables from .env
 
@@ -18,8 +17,8 @@ class MCPClient:
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
-        self._session_context = None
-        self._streams_context = None
+        self._session_context: List[ClientSession] = []
+        self._streams_context: List[Any] = []
 
     async def connect_to_sse_server(self, server_url: str):
         """Connect to an MCP server running with SSE transport"""
@@ -85,6 +84,7 @@ class MCPClient:
             "input_schema": tool.inputSchema
         } for tool in response.tools]
 
+        # print(available_tools)
         # Initial Claude API call
         response = self.anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
@@ -158,9 +158,7 @@ class MCPClient:
             await self._streams_context.__aexit__(None, None, None)
 
 
-
 async def main():
-
     client = MCPClient()
     try:
         if len(sys.argv) < 2:
