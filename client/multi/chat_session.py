@@ -22,6 +22,7 @@ class ChatSession:
     async def start(self) -> None:
         """Main chat session handler."""
         try:
+            # Initialize servers
             for server in self.servers:
                 try:
                     await server.initialize()
@@ -29,11 +30,13 @@ class ChatSession:
                     logging.error(f"Failed to initialize server: {e}")
                     return
 
+            # Enumerate tools
             all_tools = []
             for server in self.servers:
                 tools = await server.list_tools()
                 all_tools.extend(tools)
 
+            # Format tools for Claude
             available_tools = [{
                 "name": tool.name,
                 "description": tool.description,
@@ -60,18 +63,22 @@ class ChatSession:
                     final_text = []
                     for content in response.content:
                         if content.type == 'text':
+                            # Regular text (no tool call)
                             final_text.append(content.text)
                         elif content.type == 'tool_use':
+                            # Tool call
                             tool_name = content.name
                             tool_args = content.input
                             logging.info(f"[Calling tool {tool_name} with args {tool_args}]")
 
                             for server in self.servers:
                                 tools = await server.list_tools()
+                                # is the tool in this server's tools?
                                 if any(tool.name == tool_name for tool in tools):
                                     try:
                                         result = await server.execute_tool(tool_name, tool_args)
 
+                                        # Progress reporting
                                         if isinstance(result, dict) and "progress" in result:
                                             progress = result["progress"]
                                             total = result["total"]
@@ -83,14 +90,9 @@ class ChatSession:
 
                                         # Continue conversation with tool results
                                         if hasattr(content, 'text') and content.text:
-                                            messages.append({
-                                                "role": "assistant",
-                                                "content": content.text
-                                            })
-                                        messages.append({
-                                            "role": "user",
-                                            "content": result.content
-                                        })
+                                            messages.append({"role": "assistant", "content": content.text})
+
+                                        messages.append({"role": "user", "content": result.content})
                                         # final_text.append(f"Tool execution result: {result}")
                                     except Exception as e:
                                         error_msg = f"Error executing tool: {str(e)}"
